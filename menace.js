@@ -203,34 +203,26 @@ function do_win(who_wins){
 
 function play_ally(){ // ('ally' is opposite of opponent)
     var pos = board.join("")
-    if(count(pos,0)>1){
-        var which_rot = find_rotation(pos)
-        for(var i=0;i<9;i++){
-            document.getElementById("pos"+i).style.backgroundColor = "var(--square"+rotations[which_rot][i]+")"
-        }
-        pos = apply_rotation(pos,rotations[which_rot])
-        // Color the jar menace is choosing from
+    var which_rot = find_rotation(pos)
+    pos = apply_rotation(pos,rotations[which_rot])
+    if(count(pos,0)>1){ // No matchbox for final move
         document.getElementById("board"+pos).style.backgroundColor = "var(--menace-color)" // Color the jar menace is choosing from
     }
-
+    for(var i=0;i<9;i++){ // Color each empty board position
+        if(board[i] == 0) {
+            document.getElementById("pos"+i).style.backgroundColor = "var(--square"+rotations[which_rot][i]+")"
+        }
+    }
     if(player1 == 'm'){
         play_menace()
     } else if(player1 == 'y'){
-        document.getElementById("hybridauto").style.visibility = "visible"
-        if(false) { // TODO: if this is a turn that should be automated
-            play_menace()
-        } else {
-            for(var k=0;k<menace[1]["orderedBoxes"].length;k++){
-                if(menace[1]["orderedBoxes"][k]==pos){
-                    say_matchbox(k)
-                }
-            }
-            if(count(board,0) == 1){
-                say_matchbox(-1)
-            }
+        document.getElementById("hybridauto").style.visibility = "visible" // Show 'auto' button
+        var k = 0
+        while(k<menace[1]["orderedBoxes"].length && menace[1]["orderedBoxes"][k]!=pos) { // TODO: Is there a more elegant way of doing this?
+            k++
         }
+        say_matchbox(k)
     }
-
 }
 
 function play_menace(){
@@ -252,33 +244,33 @@ function play_hybrid(where){
     // 'where' comes from board_clicked(...)
     var pos = board.join("")
     var which_rot = find_rotation(pos)
-    if  (menace[1]["boxes"][pos]){which_rot = 0} // DJC: don't use a transformation if this exists
     var inv_pos = apply_rotation(pos,rotations[which_rot])
-    var inv_where = -1
-    for (var i=0;i<9;i++){if(rotations[which_rot][i]==where){inv_where=i;}}
-    var plays = menace[1]["boxes"][inv_pos]
-    if(plays[inv_where]>0){
-        menace[1]["moves"].push([inv_pos,inv_where])
-        board[where] = 1
-        document.getElementById("pos"+where).innerHTML = pieces[1]
-        document.getElementById(inv_pos+"-"+inv_where).style.backgroundColor = "var(--menace-color)"
-        check_win()
-        if(no_winner){
-            play_opponent()
-        }
-    } else {
+    var inv_where = where // TODO: There must be a more elegant way...
+    for(var i=0;i<9;i++){if(rotations[which_rot][i]==where){inv_where=i;}} // TODO: There must be a more elegant way
+    if(count(pos,0)!=1 && menace[1]["boxes"][inv_pos][inv_where]==0) {
         alert("There is no chance of that move being chosen.")
+        return
+    }
+    board[where] = 1
+    document.getElementById("pos"+where).innerHTML = pieces[1]
+    if(count(pos,0)>1) {
+        menace[1]["moves"].push([inv_pos,inv_where])
+        document.getElementById(inv_pos+"-"+inv_where).style.backgroundColor = "var(--menace-color)"
+    }
+    check_win()
+    if(no_winner){
+        play_opponent()
     }
 }
 
 function play_opponent(){
-    document.getElementById("hybridauto").style.visibility = "hidden"
+    document.getElementById("hybridauto").style.visibility = "hidden" // Hide the 'auto' button
     var prev_pos = menace[1]["moves"][menace[1]["moves"].length-1][0] // Turn off menace1's board color of previous game state
     document.getElementById("board"+prev_pos).style.backgroundColor = "" // Turn off menace1's board color of previos game state
     document.getElementById("box_number").style.visibility = "hidden" // Turn off the matchbox number display
-    for(var i=0;i<9;i++){ // Uncolor the selection squares
-        document.getElementById("pos"+i).style.backgroundColor = "" // Uncolor the selection squares
-    } // Uncolor the selection squares
+    for(var i=0;i<9;i++){ // Uncolor the 9 board positions
+        document.getElementById("pos"+i).style.backgroundColor = "" // Uncolor the 9 board positions
+    } // Uncolor the 9 board positions
     if(player2 == 'h'){
         human_turn = true
         return
@@ -493,7 +485,6 @@ function get_menace_move(n){
     } else {
         var pos = board.join("")
         var which_rot = find_rotation(pos)
-        if(menace[n]["boxes"][pos]){which_rot = 0} // DJC: don't use a transformation if this exists
         var pos = apply_rotation(pos,rotations[which_rot])
         var plays = menace[n]["boxes"][pos]
         var where = make_move(plays)
@@ -528,7 +519,7 @@ function say(stuff){
 
 function say_matchbox(num){
     document.getElementById("box_number").innerHTML = "Pick from matchbox " + num
-    if(num == -1){
+    if(num >= menace[1]["orderedBoxes"].length){
         document.getElementById("box_number").innerHTML = "Play last spot remaining"
     }
     if(player1 == "y"){
