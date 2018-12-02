@@ -18,7 +18,7 @@ var menace = {
     "boxes":{},
     "orderedBoxes":[],
     "start":[8,4,2,1],
-    "removesymm":true,
+    "removesymm":false,
     "incentives":[1,3,-1],
     "moves":[],
     "player":1},
@@ -32,11 +32,13 @@ var menace = {
     "player":2}
 }
 
-// what is player 2?
-var player = 'h'
+// which players?
+var player1 = 'y'
+var player2 = 'h'
 document.getElementById("p2picker").value = "h"
 document.getElementById("speeddiv").style.display = "none"
-var whoA = {"h":"Human", "r":"Random", "m":"MENACE2", "p":"Perfect"}
+var who1 = {"m":"Menace", "y":"Hybrid"}
+var who2 = {"h":"Human", "r":"Random", "m":"MENACE2", "p":"Perfect"}
 
 // plotting
 var plotdata = [0]
@@ -114,14 +116,22 @@ function new_game(){
     board = [0,0,0,0,0,0,0,0,0]
     no_winner = true
     for(var i=0;i<9;i++){
-        document.getElementById("pos"+i).innerHTML = "<form onsubmit='javascript:play_human("+i+");return false'><input type='submit' value=' '></form>"
+        document.getElementById("pos"+i).innerHTML = "<form onsubmit='javascript:board_clicked("+i+");return false'><input type='submit' value=' '></form>"
     }
-    play_menace()
+    play_ally()
 }
 
-function setPlayer(setTo){
-    player = setTo
-    document.getElementById("who").innerHTML = whoA[setTo]
+function setPlayer1(setTo){
+    player1 = setTo
+    document.getElementById("who1").innerHTML = who1[setTo]
+    if(setTo=="m" && !human_turn){
+        play_menace()
+    }
+}
+
+function setPlayer2(setTo){
+    player2 = setTo
+    document.getElementById("who2").innerHTML = who2[setTo]
     if(setTo=="m"){
         show_menace(2)
     } else {
@@ -166,7 +176,7 @@ function check_win(){
             say("MENACE wins.")
         }
         if(who_wins == 2){
-            say(whoA[player]+" wins.")
+            say(who2[player2]+" wins.")
         }
         do_win(who_wins)
         human_turn = false
@@ -180,12 +190,47 @@ function do_win(who_wins){
             document.getElementById("pos"+i).innerHTML = ""
         }
     }
+    for(var i=0;i<menace[1]["moves"].length;i++){
+        document.getElementById("board"+menace[1]["moves"][i][0]).style.backgroundColor = "" // Turn off all jar colors
+    }
     menace_add_beads(who_wins)
-    if(player == "h"){
+    if(player2 == "h"){
         window.setTimeout(new_game, 1000)
     } else {
         window.setTimeout(new_game, -parseInt(document.getElementById("speed_slider").value))
     }
+}
+
+function play_ally(){ // ('ally' is opposite of opponent)
+    var pos = board.join("")
+    if(count(pos,0)>1){
+        var which_rot = find_rotation(pos)
+        for(var i=0;i<9;i++){
+            document.getElementById("pos"+i).style.backgroundColor = "var(--square"+rotations[which_rot][i]+")"
+        }
+        pos = apply_rotation(pos,rotations[which_rot])
+        // Color the jar menace is choosing from
+        document.getElementById("board"+pos).style.backgroundColor = "var(--menace-color)" // Color the jar menace is choosing from
+    }
+
+    if(player1 == 'm'){
+        play_menace()
+    } else if(player1 == 'y'){
+        document.getElementById("hybridauto").style.visibility = "visible"
+        if(false) { // TODO: if this is a turn that should be automated
+            play_menace()
+        } else {
+            for(var k=0;k<menace[1]["orderedBoxes"].length;k++){
+                if(menace[1]["orderedBoxes"][k]==pos){
+                    say_matchbox(k)
+                }
+            }
+            if(count(board,0) == 1){
+                say_matchbox(-1)
+            }
+        }
+    }
+
 }
 
 function play_menace(){
@@ -203,18 +248,48 @@ function play_menace(){
     }
 }
 
+function play_hybrid(where){
+    // 'where' comes from board_clicked(...)
+    var pos = board.join("")
+    var which_rot = find_rotation(pos)
+    if  (menace[1]["boxes"][pos]){which_rot = 0} // DJC: don't use a transformation if this exists
+    var inv_pos = apply_rotation(pos,rotations[which_rot])
+    var inv_where = -1
+    for (var i=0;i<9;i++){if(rotations[which_rot][i]==where){inv_where=i;}}
+    var plays = menace[1]["boxes"][inv_pos]
+    if(plays[inv_where]>0){
+        menace[1]["moves"].push([inv_pos,inv_where])
+        board[where] = 1
+        document.getElementById("pos"+where).innerHTML = pieces[1]
+        document.getElementById(inv_pos+"-"+inv_where).style.backgroundColor = "var(--menace-color)"
+        check_win()
+        if(no_winner){
+            play_opponent()
+        }
+    } else {
+        alert("There is no chance of that move being chosen.")
+    }
+}
+
 function play_opponent(){
-    if(player == 'h'){
+    document.getElementById("hybridauto").style.visibility = "hidden"
+    var prev_pos = menace[1]["moves"][menace[1]["moves"].length-1][0] // Turn off menace1's board color of previous game state
+    document.getElementById("board"+prev_pos).style.backgroundColor = "" // Turn off menace1's board color of previos game state
+    document.getElementById("box_number").style.visibility = "hidden" // Turn off the matchbox number display
+    for(var i=0;i<9;i++){ // Uncolor the selection squares
+        document.getElementById("pos"+i).style.backgroundColor = "" // Uncolor the selection squares
+    } // Uncolor the selection squares
+    if(player2 == 'h'){
         human_turn = true
         return
     }
     human_turn = false
     var where = undefined
-    if(player == 'r'){
+    if(player2 == 'r'){
         where = get_random_move()
-    } else if(player == 'm'){
+    } else if(player2 == 'm'){
         where = get_menace_move(2)
-    } else if(player == 'p'){
+    } else if(player2 == 'p'){
         where = get_perfect_move()
     }
     if(where=="resign"){
@@ -256,6 +331,7 @@ function find_all_rotations(pos){
 }
 
 function find_rotation(pos){
+    if(menace[1]["boxes"][pos]){return 0} // DJC: don't use a transformation if this exists
     var max_rot = find_all_rotations(pos)
     return max_rot[Math.floor(Math.random()*max_rot.length)]
 }
@@ -357,7 +433,7 @@ function reset_menace(n){
         }
     }
     show_menace(1)
-    if(player=="m"){
+    if(player2=="m"){
         show_menace(2)
     }
     new_game()
@@ -366,6 +442,7 @@ function reset_menace(n){
 function update_set_r(n){
     update_set(n)
     reset_menace(n)
+    // TODO: clear the messages
 }
 
 function update_set(n){
@@ -397,7 +474,7 @@ function menace_add_beads(result){
     for(var i=0;i<menace[1]["moves"].length;i++){
         box_add(menace[1]["moves"][i][0],menace[1]["moves"][i][1],menace[1]["incentives"][result],1)
     }
-    if(player=="m"){
+    if(player2=="m"){
         for(var i=0;i<menace[2]["moves"].length;i++){
             box_add(menace[2]["moves"][i][0],menace[2]["moves"][i][1],menace[2]["incentives"][opposite_result(result)],2)
         }
@@ -416,11 +493,12 @@ function get_menace_move(n){
     } else {
         var pos = board.join("")
         var which_rot = find_rotation(pos)
+        if(menace[n]["boxes"][pos]){which_rot = 0} // DJC: don't use a transformation if this exists
         var pos = apply_rotation(pos,rotations[which_rot])
         var plays = menace[n]["boxes"][pos]
         var where = make_move(plays)
         if(where == "resign"){return "resign"}
-        document.getElementById(pos+"-"+where).style.color = "#FF0000"
+        document.getElementById(pos+"-"+where).style.backgroundColor = "var(--menace-color)"
         var inv_where = rotations[which_rot][where]
         menace[n]["moves"].push([pos,where])
     }
@@ -446,6 +524,16 @@ function say(stuff){
     }
     said = new_said
     document.getElementById("list_here").innerHTML = said.join("<br />")
+}
+
+function say_matchbox(num){
+    document.getElementById("box_number").innerHTML = "Pick from matchbox " + num
+    if(num == -1){
+        document.getElementById("box_number").innerHTML = "Play last spot remaining"
+    }
+    if(player1 == "y"){
+        document.getElementById("box_number").style.visibility = "visible"
+    }
 }
 
 function make_ox(pos,n){
@@ -518,9 +606,9 @@ function show_menace(n){
     output += "Win: Add <input size=1 id='_"+n+"_ic_w' /> marbles<br/>"
     output += "Draw: Add <input size=1 id='_"+n+"_ic_d' /> marbles<br/>"
     output += "Lose: Take <input size=1 id='_"+n+"_ic_l' /> marbles<br/>"
-    output += "<form onsubmit='update_set("+n+");return false'>"
-    output += "<input type='submit' value='Update "+menacename+"'>"
-    output += "</form>"
+    //output += "<form onsubmit='update_set("+n+");return false'>" // DJC: this button is confusing
+    //output += "<input type='submit' value='Update "+menacename+"'>" // DJC: this button is confusing
+    //output += "</form>" // DJC: this button is confusing
     output += "<form onsubmit='update_set_r("+n+");return false'>"
     output += "<input type='submit' value='Update and reset "+menacename+"'>"
     output += "</form>"
@@ -556,6 +644,16 @@ function hide_menace(n){
     document.getElementById("_"+n+"_moves").innerHTML = ""
 }
 
+function board_clicked(where){
+    if(human_turn && no_winner){
+        play_human(where)
+    }
+    else if(!human_turn && player1=='y'){
+        play_hybrid(where)
+    }
+    // else: Ignore clicks
+}
+
 // opponent moves
 function get_random_move(){
     choices = []
@@ -578,7 +676,7 @@ function play_human(where){
         document.getElementById("pos"+where).innerHTML = pieces[2]
         check_win()
         if(no_winner){
-            play_menace()
+            play_ally()
         }
     }
 }
