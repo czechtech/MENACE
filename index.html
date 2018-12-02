@@ -49,13 +49,14 @@ table.board td form {margin:0px}
     <td id='pos8' class='p8'></td>
 </tr>
 </table>
-<div class='players'>O: <select id='p1picker' onchange='setPlayer1(this.value)'>
+<div class='players'>
+O: <select id='p1picker' onchange='setPlayer1(this.value)'>
     <option value='y'>Hybrid</option>
     <option value='m'>Menace</option>
 </select>
 <button onclick="play_menace()" id='hybridauto'>auto</button>
 <br />
-X:<select id='p2picker' onchange='setPlayer2(this.value)'>
+X: <select id='p2picker' onchange='setPlayer2(this.value)'>
     <option value='h'>Human</option>
     <option value='r'>Random</option>
     <option value='m'>MENACE2</option>
