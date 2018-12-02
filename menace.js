@@ -18,6 +18,7 @@ var menace = {
     "boxes":{},
     "orderedBoxes":[],
     "start":[8,4,2,1],
+    "start":[4,3,2,1],
     "removesymm":false,
     "incentives":[1,3,-1],
     "moves":[],
@@ -25,7 +26,7 @@ var menace = {
  2:{
     "boxes":{},
     "orderedBoxes":[],
-    "start":[8,4,2,1],
+    "start":[4,3,2,1],
     "removesymm":true,
     "incentives":[1,3,-1],
     "moves":[],
@@ -117,6 +118,7 @@ function new_game(){
     no_winner = true
     for(var i=0;i<9;i++){
         document.getElementById("pos"+i).innerHTML = "<form onsubmit='javascript:board_clicked("+i+");return false'><input type='submit' value=' '></form>"
+        // TODO: clear all menace colors here??
     }
     play_ally()
 }
